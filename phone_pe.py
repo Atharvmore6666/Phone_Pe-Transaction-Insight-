@@ -44,7 +44,7 @@ With the increasing reliance on digital payment systems like PhonePe, understand
 """
 
 # Step 1: Clone the PhonePe Pulse GitHub Repository
-!git clone https://github.com/PhonePe/pulse.git
+# !git clone https://github.com/PhonePe/pulse.git
 
 # Step 2: Import Required Libraries
 import os
