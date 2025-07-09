@@ -1,207 +1,104 @@
+# streamlit_app.py
+
 import streamlit as st
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 import plotly.express as px
 
-st.set_page_config(layout="wide", page_title="📊 Enhanced PhonePe Dashboard")
-st.title("📱 PhonePe Transaction Insights - Interactive Dashboard")
+st.set_page_config(page_title="PhonePe Dashboard", layout="wide")
+st.title("📱 PhonePe Pulse Dashboard")
 
-# Load CSVs
-df1 = pd.read_csv("aggregated_transaction.csv")
-df2 = pd.read_csv("aggregated_user.csv")
-df3 = pd.read_csv("aggregated_insurance.csv")
-df4 = pd.read_csv("map_user.csv")
-df5 = pd.read_csv("map_transaction.csv")
-df6 = pd.read_csv("map_insurance.csv")
-df7 = pd.read_csv("top_user.csv")
-df8 = pd.read_csv("top_transaction.csv")
-df9 = pd.read_csv("top_insurance.csv")
+# 📥 Load data
+df_tr = pd.read_csv("aggregated_transaction.csv")
+df_us = pd.read_csv("aggregated_user.csv")
+df_ins = pd.read_csv("aggregated_insurance.csv")
+df_map_tr = pd.read_csv("map_transaction.csv")
+df_map_us = pd.read_csv("map_user.csv")
+df_map_ins = pd.read_csv("map_insurance.csv")
+df_top_tr = pd.read_csv("top_transaction.csv")
+df_top_us = pd.read_csv("top_user.csv")
+df_top_ins = pd.read_csv("top_insurance.csv")
 
-# New data
-engagement_df = pd.read_csv("df_user_engagement.csv")
-device_df = pd.read_csv("df_device_dominance.csv")
-dynamics_df = pd.read_csv("df_transaction_dynamics.csv")
-insurance_growth_df = pd.read_csv("df_insurance_growth.csv")
-top_district_df = pd.read_csv("df_top_districts.csv")
+# 🛠 Sidebar - navigation and filters
+st.sidebar.header("Navigation")
+page = st.sidebar.radio("", ["Transactions", "Users", "Insurance"])
 
-# 🔧 Sidebar Filters
-st.sidebar.header("🔧 Filters")
-years = sorted(df1["Year"].dropna().unique())
-states = sorted(df1["State"].dropna().unique())
-txn_types = df1["Transaction_type"].dropna().unique()
+st.sidebar.header("Filters")
+year_opt = sorted(df_tr["Year"].unique())
+quarter_opt = sorted(df_tr["Quarter"].unique())
+state_opt = sorted(df_tr["State"].unique())
+txn_opt = sorted(df_tr["Transaction_type"].unique())
 
-selected_year = st.sidebar.slider("Select Year", min_value=int(min(years)), max_value=int(max(years)), value=int(max(years)))
-selected_state = st.sidebar.selectbox("Select State", ["All"] + states)
-selected_txn_types = st.sidebar.multiselect("Select Transaction Types", txn_types, default=list(txn_types))
+year = st.sidebar.selectbox("Year", year_opt, index=len(year_opt)-1)
+quarter = st.sidebar.selectbox("Quarter", ["All"] + quarter_opt)
+state = st.sidebar.selectbox("State", ["All"] + state_opt)
+txn_type = st.sidebar.selectbox("Transaction Type", ["All"] + txn_opt)
 
-# 🧹 Apply Filters
-filtered_df1 = df1[df1["Year"] == selected_year]
-if selected_state != "All":
-    filtered_df1 = filtered_df1[filtered_df1["State"] == selected_state]
-filtered_df1 = filtered_df1[filtered_df1["Transaction_type"].isin(selected_txn_types)]
+# 🔄 Filter function
+def apply_filters(df, cols):
+    df_f = df[df["Year"] == year]
+    if "Quarter" in cols and quarter != "All":
+        df_f = df_f[df_f["Quarter"] == quarter]
+    if "State" in cols and state != "All":
+        df_f = df_f[df_f["State"] == state]
+    if "Transaction_type" in cols and txn_type != "All":
+        df_f = df_f[df_f["Transaction_type"] == txn_type]
+    return df_f
 
-filtered_df2 = df2[df2["Year"] == selected_year]
-if selected_state != "All":
-    filtered_df2 = filtered_df2[filtered_df2["State"] == selected_state]
+# 📊 Transactions Page
+if page == "Transactions":
+    st.header("💰 Transaction Trends")
+    df = apply_filters(df_tr, ["Year","Quarter","State","Transaction_type"])
+    if df.empty:
+        st.warning("No data for the selected filters.")
+    else:
+        fig = px.bar(df, x="Quarter", y="Amount", color="Transaction_type", barmode="group",
+                     title="Transaction Amount by Quarter")
+        st.plotly_chart(fig, use_container_width=True)
 
-filtered_df4 = df4[df4["Year"] == selected_year]
-if selected_state != "All":
-    filtered_df4 = filtered_df4[filtered_df4["State"] == selected_state]
+    st.subheader("📍 Top States by Volume")
+    grouped = df.groupby("State")["Amount"].sum().reset_index().nlargest(10, "Amount")
+    st.plotly_chart(px.bar(grouped, x="State", y="Amount", title="Top 10 States"))
 
-filtered_df3 = df3[df3["Year"] == selected_year]
-if selected_state != "All":
-    filtered_df3 = filtered_df3[filtered_df3["State"] == selected_state]
-
-filtered_df8 = df8[df8["Year"] == selected_year]
-if selected_state != "All":
-    filtered_df8 = filtered_df8[filtered_df8["State"] == selected_state]
-
-# Sidebar menu
-menu = st.sidebar.radio("📌 Select Section", [
-    "Overview",
-    "Transaction Trends",
-    "User Insights",
-    "Insurance Trends",
-    "Top Districts",
-    "State-Level Map",
-    "📱 Device Insights",
-    "📈 Transaction Dynamics",
-    "🛡️ Insurance Growth",
-    "🥇 District Leaderboard"
-])
-
-# Overview
-if menu == "Overview":
-    st.header("📊 Dataset Preview")
-    col1, col2 = st.columns(2)
-    with col1:
-        st.subheader("Filtered Aggregated Transactions")
-        st.dataframe(filtered_df1.head())
-    with col2:
-        st.subheader("Aggregated Users")
-        if not filtered_df2.empty:
-            st.dataframe(filtered_df2.head())
-        else:
-            st.warning("No user data available for selected filters.")
-    st.success("Data loaded from CSVs successfully!")
-
-# Transaction Trends
-elif menu == "Transaction Trends":
-    st.header("📈 Transaction Amount by Type")
-    if not filtered_df1.empty:
-        fig = px.bar(filtered_df1, x="Transaction_type", y="Amount", color="Transaction_type",
-                     title=f"Transaction Types in {selected_year}", text_auto=True)
+    st.subheader("🏙️ District Transaction Map")
+    map_df = apply_filters(df_map_tr, ["Year","Quarter","State"])
+    if not map_df.empty:
+        fig = px.scatter_mapbox(map_df, lat="Latitude", lon="Longitude", size="Amount", hover_name="District",
+                                color="Amount", zoom=4, height=400, mapbox_style="carto-positron")
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.warning("No transaction data available for selected filters.")
+        st.warning("No district data available.")
 
-# User Insights
-elif menu == "User Insights":
-    st.header("📱 User Behavior Insights")
-    if not filtered_df2.empty:
-        top_brands = filtered_df2.groupby('Brand')['Count'].sum().nlargest(5).reset_index()
-        fig1 = px.pie(top_brands, names='Brand', values='Count', title="Top Mobile Brands")
-        st.plotly_chart(fig1, use_container_width=True)
+# 👤 Users Page
+elif page == "Users":
+    st.header("📱 User Insights")
+    df = apply_filters(df_us, ["Year","Quarter","State"])
+    if df.empty:
+        st.warning("No data for the selected filters.")
     else:
-        st.warning("No brand data to display.")
-
-    st.subheader("User Engagement Ratio by State")
-    if not filtered_df4.empty:
-        filtered_df4['Engagement_Ratio'] = filtered_df4['AppOpens'] / filtered_df4['RegisteredUsers']
-        fig2 = px.bar(filtered_df4, x='State', y='Engagement_Ratio', color='Engagement_Ratio', title=f"Engagement Ratio by State - {selected_year}")
-        st.plotly_chart(fig2, use_container_width=True)
-    else:
-        st.warning("No user engagement data to display.")
-
-# Insurance Trends
-elif menu == "Insurance Trends":
-    st.header("🛡️ Insurance Transaction Overview")
-    if not filtered_df3.empty:
-        insurance_summary = filtered_df3.groupby("State")["Amount"].sum().nlargest(10).reset_index()
-        fig = px.bar(insurance_summary, x="State", y="Amount", title="Top 10 States by Insurance Amount", color="Amount", text_auto=True)
+        fig = px.pie(df.groupby("Brand")["Count"].sum().reset_index(), names="Brand", values="Count",
+                     title="Brand-wise User Distribution")
         st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("No insurance data for selected filters.")
+        st.subheader("Heatmap of App Opens")
+        heat = df_map_us if state=="All" else df_map_us[df_map_us["State"]==state]
+        st.plotly_chart(px.choropleth(heat.groupby("State")["Count"].sum().reset_index(),
+                                     locations="State", locationmode="country names", color="Count",
+                                     title="App Opens by State"), use_container_width=True)
 
-# Top Districts
-elif menu == "Top Districts":
-    st.header("🏙️ Top Districts by Transaction")
-    if not filtered_df8.empty:
-        metric = st.radio("Metric", ["Amount", "Count"])
-        district_summary = filtered_df8.groupby("District")[metric].sum().nlargest(10).reset_index()
-        fig = px.bar(district_summary, x="District", y=metric, color=metric, title=f"Top 10 Districts by {metric} in {selected_state if selected_state != 'All' else 'All States'}")
+# 🛡 Insurance Page
+elif page == "Insurance":
+    st.header("🛡️ Insurance Trends")
+    df = apply_filters(df_ins, ["Year","Quarter","State"])
+    if df.empty:
+        st.warning("No data for the selected filters.")
+    else:
+        fig = px.line(df.groupby("Quarter")["Amount"].sum().reset_index(), x="Quarter", y="Amount",
+                      title="Insurance Amount by Quarter")
         st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("No district-level data found for selected filters.")
 
-# Map Visualization
-elif menu == "State-Level Map":
-    st.header("🗺️ India Transaction Heatmap")
-    map_data = filtered_df1.groupby("State")["Amount"].sum().reset_index()
-    if not map_data.empty:
-        fig = px.choropleth(
-            map_data,
-            geojson="https://raw.githubusercontent.com/geohacker/india/master/state/india_states.geojson",
-            featureidkey="properties.ST_NM",
-            locations="State",
-            color="Amount",
-            title=f"Transaction Heatmap - {selected_year}",
-            color_continuous_scale="Viridis"
-        )
-        fig.update_geos(fitbounds="locations", visible=False)
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("No map data available for selected filters.")
+        st.subheader("Top Districts")
+        topd = apply_filters(df_top_ins, ["Year","Quarter","State"])
+        st.table(topd.nlargest(10, "Amount")[["District","Amount"]])
 
-# Device Insights
-elif menu == "📱 Device Insights":
-    st.header("📱 Most Used Devices")
-    top_device = device_df.groupby("Brand")["User_Count"].sum().nlargest(10).reset_index()
-    fig = px.pie(top_device, names="Brand", values="User_Count", title="Top 10 Phone Brands")
-    st.plotly_chart(fig, use_container_width=True)
-
-# Transaction Dynamics
-elif menu == "📈 Transaction Dynamics":
-    st.header("💸 Average Transaction Value Over Time")
-    fig = px.line(dynamics_df, x="Year", y="Average_Transaction_Value", color="Transaction_type",
-                  markers=True, title="Average Transaction Value by Type")
-    st.plotly_chart(fig, use_container_width=True)
-
-# Insurance Growth
-elif menu == "🛡️ Insurance Growth":
-    st.header("📈 Insurance Growth by Year")
-    fig = px.area(insurance_growth_df, x="Year", y="Amount", color="State", title="Insurance Premiums Collected by State")
-    st.plotly_chart(fig, use_container_width=True)
-
-# District Leaderboard
-elif menu == "🥇 District Leaderboard":
-    st.header("🏆 Top Performing Districts")
-    metric = st.selectbox("Select Metric", ["Amount", "Count"])
-    view = st.selectbox("Select Domain", ["Transaction", "User", "Insurance"])
-
-    if view == "Transaction":
-        df = df8.copy()
-    elif view == "User":
-        df = df7.copy()
-    else:
-        df = df9.copy()
-
-    df = df[df["Year"] == selected_year]
-    if selected_state != "All":
-        df = df[df["State"] == selected_state]
-
-    if not df.empty:
-        top = df.groupby("District")[metric].sum().nlargest(10).reset_index()
-        fig = px.bar(top, x="District", y=metric, color=metric,
-                     title=f"Top 10 Districts by {metric} in {view}")
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("No data found for selected filters.")
-
-# Footer
-st.markdown("---")
-st.caption("📍 Created by Atharva More | Data: PhonePe Pulse ")
 
 
 
