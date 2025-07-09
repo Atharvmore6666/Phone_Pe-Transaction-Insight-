@@ -4,3 +4,4 @@ matplotlib
 seaborn
 sqlalchemy
 tqdm
+plotly
