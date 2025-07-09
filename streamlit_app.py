@@ -3,27 +3,21 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-from phone_pe import (
-    parse_aggregated_transaction, parse_aggregated_user, parse_aggregated_insurance,
-    parse_map_user, parse_map_transaction, parse_map_insurance,
-    parse_top_user, parse_top_transaction, parse_top_insurance
-)
-
 st.set_page_config(layout="wide", page_title="📊 PhonePe Dashboard")
-
 st.title("📱 PhonePe Transaction Insights")
 
-# Load data
-df1 = parse_aggregated_transaction()
-df2 = parse_aggregated_user()
-df3 = parse_aggregated_insurance()
-df4 = parse_map_user()
-df5 = parse_map_transaction()
-df6 = parse_map_insurance()
-df7 = parse_top_user()
-df8 = parse_top_transaction()
-df9 = parse_top_insurance()
+# ✅ Load all pre-saved CSVs (from GitHub repo)
+df1 = pd.read_csv("aggregated_transaction.csv")
+df2 = pd.read_csv("aggregated_user.csv")
+df3 = pd.read_csv("aggregated_insurance.csv")
+df4 = pd.read_csv("map_user.csv")
+df5 = pd.read_csv("map_transaction.csv")
+df6 = pd.read_csv("map_insurance.csv")
+df7 = pd.read_csv("top_user.csv")
+df8 = pd.read_csv("top_transaction.csv")
+df9 = pd.read_csv("top_insurance.csv")
 
+# 🔘 Sidebar Menu
 menu = st.sidebar.radio("📌 Select Section", [
     "Overview",
     "Transaction Trends",
@@ -32,16 +26,18 @@ menu = st.sidebar.radio("📌 Select Section", [
     "Top Districts"
 ])
 
+# 📊 Overview Section
 if menu == "Overview":
-    st.header("📊 Data Overview")
+    st.header("📊 Dataset Preview")
     with st.expander("Aggregated Transactions"):
         st.dataframe(df1.head())
     with st.expander("Aggregated Users"):
         st.dataframe(df2.head())
     with st.expander("Aggregated Insurance"):
         st.dataframe(df3.head())
-    st.success("Use the sidebar to explore trends and insights!")
+    st.success("CSV data loaded successfully from GitHub!")
 
+# 📈 Transaction Trends
 elif menu == "Transaction Trends":
     st.header("📈 Transaction Type Trends Over Years")
     grouped = df1.groupby(['Year', 'Transaction_type'])['Amount'].sum().reset_index()
@@ -50,6 +46,7 @@ elif menu == "Transaction Trends":
     plt.xticks(rotation=45)
     st.pyplot(fig)
 
+# 📱 User Insights
 elif menu == "User Insights":
     st.header("📱 Top Mobile Brands by Registered Users")
     brand_summary = df2.groupby('Brand')['Count'].sum().sort_values(ascending=False).head(10).reset_index()
@@ -64,6 +61,7 @@ elif menu == "User Insights":
     sns.barplot(data=top_states, x="Engagement_Ratio", y="State", palette="summer", ax=ax2)
     st.pyplot(fig2)
 
+# 🛡️ Insurance Trends
 elif menu == "Insurance Trends":
     st.header("🛡️ Insurance Amount by State")
     insurance_df = df3.groupby('State')['Amount'].sum().sort_values(ascending=False).head(10).reset_index()
@@ -72,6 +70,7 @@ elif menu == "Insurance Trends":
     plt.xticks(rotation=45)
     st.pyplot(fig)
 
+# 🏙️ Top Districts by Transaction
 elif menu == "Top Districts":
     st.header("🏙️ Top 10 Districts by Transaction Amount")
     top_districts = df8.groupby('District')['Amount'].sum().sort_values(ascending=False).head(10).reset_index()
@@ -80,6 +79,8 @@ elif menu == "Top Districts":
     plt.xticks(rotation=45)
     st.pyplot(fig)
 
+# Footer
 st.markdown("---")
-st.caption("📍 Project by Atharva More | Data from PhonePe Pulse GitHub")
+st.caption("📍 Built by Atharva More | Data from PhonePe Pulse GitHub")
+
 
