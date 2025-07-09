@@ -16,33 +16,6 @@ df_top_tr = pd.read_csv("top_transaction.csv")
 df_top_us = pd.read_csv("top_user.csv")
 df_top_ins = pd.read_csv("top_insurance.csv")
 
-# Add lat/lon columns for map CSVs if missing
-from geopy.geocoders import Nominatim
-geolocator = Nominatim(user_agent="geoapi")
-
-def add_lat_lon(df):
-    if "Latitude" not in df.columns or "Longitude" not in df.columns:
-        lats, lons = [], []
-        for district in df['District']:
-            try:
-                location = geolocator.geocode(f"{district}, India")
-                if location:
-                    lats.append(location.latitude)
-                    lons.append(location.longitude)
-                else:
-                    lats.append(None)
-                    lons.append(None)
-            except:
-                lats.append(None)
-                lons.append(None)
-        df['Latitude'] = lats
-        df['Longitude'] = lons
-    return df
-
-df_map_tr = add_lat_lon(df_map_tr)
-df_map_us = add_lat_lon(df_map_us)
-df_map_ins = add_lat_lon(df_map_ins)
-
 # Sidebar filters
 st.sidebar.header("🔎 Filters")
 page = st.sidebar.radio("Navigate", ["Aggregated", "Map", "Top Leaders", "Users", "Insurance"])
@@ -84,9 +57,12 @@ elif page == "Map":
     st.subheader("🗺️ Map-Based Visualizations")
     df_map = filter_df(df_map_tr)
     if not df_map.empty:
-        st.plotly_chart(px.scatter_mapbox(df_map, lat="Latitude", lon="Longitude", size="Amount", color="Amount",
-                                          mapbox_style="carto-positron", zoom=3, hover_name="District",
-                                          title="District-wise Transaction Amount"), use_container_width=True)
+        if 'Latitude' in df_map.columns and 'Longitude' in df_map.columns:
+            st.plotly_chart(px.scatter_mapbox(df_map, lat="Latitude", lon="Longitude", size="Amount", color="Amount",
+                                              mapbox_style="carto-positron", zoom=3, hover_name="District",
+                                              title="District-wise Transaction Amount"), use_container_width=True)
+        else:
+            st.warning("Map data must include Latitude and Longitude columns.")
     else:
         st.warning("No data available for selected filters.")
 
@@ -114,7 +90,7 @@ elif page == "Users":
         st.plotly_chart(px.bar(df_user, x="Brand", y="Count", color="Brand", title="User Brand Distribution"), use_container_width=True)
 
         df_map_user = filter_df(df_map_us)
-        if not df_map_user.empty:
+        if not df_map_user.empty and 'Latitude' in df_map_user.columns and 'Longitude' in df_map_user.columns:
             st.plotly_chart(px.scatter_mapbox(df_map_user, lat="Latitude", lon="Longitude", size="Count", color="Count",
                                               mapbox_style="open-street-map", zoom=3, hover_name="District",
                                               title="District-wise App Opens"), use_container_width=True)
@@ -134,7 +110,7 @@ elif page == "Insurance":
         st.plotly_chart(fig_line, use_container_width=True)
 
         df_map_ins_f = filter_df(df_map_ins)
-        if not df_map_ins_f.empty:
+        if not df_map_ins_f.empty and 'Latitude' in df_map_ins_f.columns and 'Longitude' in df_map_ins_f.columns:
             st.plotly_chart(px.scatter_mapbox(df_map_ins_f, lat="Latitude", lon="Longitude", size="Amount", color="Amount",
                                               mapbox_style="carto-positron", zoom=3, hover_name="District",
                                               title="District-wise Insurance Collection"), use_container_width=True)
@@ -142,4 +118,5 @@ elif page == "Insurance":
         st.warning("No insurance data available for selected filters.")
 
 st.markdown("---")
-st.caption("📍 Dashboard inspired by Atharva| Data: PhonePe Pulse")
+st.caption("📍 Dashboard inspired by Kaleeswari | Customized by Atharva | Data: PhonePe Pulse")
+
