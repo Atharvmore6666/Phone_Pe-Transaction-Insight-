@@ -34,6 +34,22 @@ if selected_state != "All":
     filtered_df1 = filtered_df1[filtered_df1["State"] == selected_state]
 filtered_df1 = filtered_df1[filtered_df1["Transaction_type"].isin(selected_txn_types)]
 
+filtered_df2 = df2[df2["Year"] == selected_year]
+if selected_state != "All":
+    filtered_df2 = filtered_df2[filtered_df2["State"] == selected_state]
+
+filtered_df4 = df4[df4["Year"] == selected_year]
+if selected_state != "All":
+    filtered_df4 = filtered_df4[filtered_df4["State"] == selected_state]
+
+filtered_df3 = df3[df3["Year"] == selected_year]
+if selected_state != "All":
+    filtered_df3 = filtered_df3[filtered_df3["State"] == selected_state]
+
+filtered_df8 = df8[df8["Year"] == selected_year]
+if selected_state != "All":
+    filtered_df8 = filtered_df8[filtered_df8["State"] == selected_state]
+
 # Sidebar menu
 menu = st.sidebar.radio("📌 Select Section", [
     "Overview",
@@ -53,72 +69,84 @@ if menu == "Overview":
         st.dataframe(filtered_df1.head())
     with col2:
         st.subheader("Aggregated Users")
-        st.dataframe(df2[df2["Year"] == selected_year].head())
+        if not filtered_df2.empty:
+            st.dataframe(filtered_df2.head())
+        else:
+            st.warning("No user data available for selected filters.")
     st.success("Data loaded from CSVs successfully!")
 
 # Transaction Trends
 elif menu == "Transaction Trends":
     st.header("📈 Transaction Amount by Type")
-    fig = px.bar(filtered_df1, x="Transaction_type", y="Amount", color="Transaction_type",
-                 title=f"Transaction Types in {selected_year}", text_auto=True)
-    st.plotly_chart(fig, use_container_width=True)
+    if not filtered_df1.empty:
+        fig = px.bar(filtered_df1, x="Transaction_type", y="Amount", color="Transaction_type",
+                     title=f"Transaction Types in {selected_year}", text_auto=True)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No transaction data available for selected filters.")
 
 # User Insights
 elif menu == "User Insights":
     st.header("📱 User Behavior Insights")
-    top_brands = df2[df2["Year"] == selected_year].groupby('Brand')['Count'].sum().nlargest(5).reset_index()
-    fig1 = px.pie(top_brands, names='Brand', values='Count', title="Top Mobile Brands")
-    st.plotly_chart(fig1, use_container_width=True)
+    if not filtered_df2.empty:
+        top_brands = filtered_df2.groupby('Brand')['Count'].sum().nlargest(5).reset_index()
+        fig1 = px.pie(top_brands, names='Brand', values='Count', title="Top Mobile Brands")
+        st.plotly_chart(fig1, use_container_width=True)
+    else:
+        st.warning("No brand data to display.")
 
     st.subheader("User Engagement Ratio by State")
-    df4['Engagement_Ratio'] = df4['AppOpens'] / df4['RegisteredUsers']
-    engagement_state = df4[df4['Year'] == selected_year]
-    fig2 = px.bar(engagement_state, x='State', y='Engagement_Ratio', color='Engagement_Ratio', title=f"Engagement Ratio by State - {selected_year}")
-    st.plotly_chart(fig2, use_container_width=True)
+    if not filtered_df4.empty:
+        filtered_df4['Engagement_Ratio'] = filtered_df4['AppOpens'] / filtered_df4['RegisteredUsers']
+        fig2 = px.bar(filtered_df4, x='State', y='Engagement_Ratio', color='Engagement_Ratio', title=f"Engagement Ratio by State - {selected_year}")
+        st.plotly_chart(fig2, use_container_width=True)
+    else:
+        st.warning("No user engagement data to display.")
 
 # Insurance Trends
 elif menu == "Insurance Trends":
     st.header("🛡️ Insurance Transaction Overview")
-    filtered_df3 = df3[df3["Year"] == selected_year]
-    if selected_state != "All":
-        filtered_df3 = filtered_df3[filtered_df3["State"] == selected_state]
-    insurance_summary = filtered_df3.groupby("State")["Amount"].sum().nlargest(10).reset_index()
-    fig = px.bar(insurance_summary, x="State", y="Amount", title="Top 10 States by Insurance Amount", color="Amount", text_auto=True)
-    st.plotly_chart(fig, use_container_width=True)
+    if not filtered_df3.empty:
+        insurance_summary = filtered_df3.groupby("State")["Amount"].sum().nlargest(10).reset_index()
+        fig = px.bar(insurance_summary, x="State", y="Amount", title="Top 10 States by Insurance Amount", color="Amount", text_auto=True)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No insurance data for selected filters.")
 
 # Top Districts
 elif menu == "Top Districts":
     st.header("🏙️ Top Districts by Transaction")
-    metric = st.radio("Metric", ["Amount", "Count"])
-    filtered_df8 = df8[df8["Year"] == selected_year]
-    if selected_state != "All":
-        filtered_df8 = filtered_df8[filtered_df8["State"] == selected_state]
-    district_summary = filtered_df8.groupby("District")[metric].sum().nlargest(10).reset_index()
-    fig = px.bar(district_summary, x="District", y=metric, color=metric, title=f"Top 10 Districts by {metric} in {selected_state if selected_state != 'All' else 'All States'}")
-    st.plotly_chart(fig, use_container_width=True)
+    if not filtered_df8.empty:
+        metric = st.radio("Metric", ["Amount", "Count"])
+        district_summary = filtered_df8.groupby("District")[metric].sum().nlargest(10).reset_index()
+        fig = px.bar(district_summary, x="District", y=metric, color=metric, title=f"Top 10 Districts by {metric} in {selected_state if selected_state != 'All' else 'All States'}")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No district-level data found for selected filters.")
 
-# Map Visualization (Option 1: Built-In India Map)
+# Map Visualization
 elif menu == "State-Level Map":
     st.header("🗺️ India Transaction Heatmap")
-
     map_data = filtered_df1.groupby("State")["Amount"].sum().reset_index()
-
-    # Use Plotly's built-in map with state boundaries
-    fig = px.choropleth(
-        map_data,
-        geojson="https://raw.githubusercontent.com/geohacker/india/master/state/india_states.geojson",
-        featureidkey="properties.ST_NM",
-        locations="State",
-        color="Amount",
-        title=f"Transaction Heatmap - {selected_year}",
-        color_continuous_scale="Viridis"
-    )
-    fig.update_geos(fitbounds="locations", visible=False)
-    st.plotly_chart(fig, use_container_width=True)
+    if not map_data.empty:
+        fig = px.choropleth(
+            map_data,
+            geojson="https://raw.githubusercontent.com/geohacker/india/master/state/india_states.geojson",
+            featureidkey="properties.ST_NM",
+            locations="State",
+            color="Amount",
+            title=f"Transaction Heatmap - {selected_year}",
+            color_continuous_scale="Viridis"
+        )
+        fig.update_geos(fitbounds="locations", visible=False)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No map data available for selected filters.")
 
 # Footer
 st.markdown("---")
 st.caption("📍 Created by Atharva More | Data: PhonePe Pulse | Power BI Style Filters")
+
 
 
 
