@@ -1,5 +1,3 @@
-# streamlit_app.py
-
 import streamlit as st
 import pandas as pd
 import seaborn as sns
@@ -36,11 +34,11 @@ menu = st.sidebar.radio("📌 Select Section", [
 
 if menu == "Overview":
     st.header("📊 Data Overview")
-    with st.expander("Aggregated Transactions (df1)"):
+    with st.expander("Aggregated Transactions"):
         st.dataframe(df1.head())
-    with st.expander("Aggregated Users (df2)"):
+    with st.expander("Aggregated Users"):
         st.dataframe(df2.head())
-    with st.expander("Aggregated Insurance (df3)"):
+    with st.expander("Aggregated Insurance"):
         st.dataframe(df3.head())
     st.success("Use the sidebar to explore trends and insights!")
 
@@ -84,3 +82,4 @@ elif menu == "Top Districts":
 
 st.markdown("---")
 st.caption("📍 Project by Atharva More | Data from PhonePe Pulse GitHub")
+
