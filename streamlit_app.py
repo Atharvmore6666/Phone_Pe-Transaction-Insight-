@@ -97,15 +97,23 @@ elif menu == "Top Districts":
     fig = px.bar(district_summary, x="District", y=metric, color=metric, title=f"Top 10 Districts by {metric} in {selected_state if selected_state != 'All' else 'All States'}")
     st.plotly_chart(fig, use_container_width=True)
 
-# Map Visualization
+# Map Visualization (Option 1: Built-In India Map)
 elif menu == "State-Level Map":
-    st.header("🗺️ State-Level Transaction Heatmap")
+    st.header("🗺️ India Transaction Heatmap")
+
     map_data = filtered_df1.groupby("State")["Amount"].sum().reset_index()
-    state_coords = pd.read_csv("https://raw.githubusercontent.com/ronit-kumar-india/indian-states-geojson/main/indian_states_centroid.csv")
-    merged = pd.merge(map_data, state_coords, on="State", how="left")
-    fig = px.scatter_mapbox(merged, lat="Latitude", lon="Longitude", hover_name="State", size="Amount",
-                            size_max=60, zoom=3, mapbox_style="carto-positron",
-                            color="Amount", color_continuous_scale="Viridis")
+
+    # Use Plotly's built-in map with state boundaries
+    fig = px.choropleth(
+        map_data,
+        geojson="https://raw.githubusercontent.com/geohacker/india/master/state/india_states.geojson",
+        featureidkey="properties.ST_NM",
+        locations="State",
+        color="Amount",
+        title=f"Transaction Heatmap - {selected_year}",
+        color_continuous_scale="Viridis"
+    )
+    fig.update_geos(fitbounds="locations", visible=False)
     st.plotly_chart(fig, use_container_width=True)
 
 # Footer
