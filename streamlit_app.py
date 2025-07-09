@@ -118,5 +118,5 @@ elif page == "Insurance":
         st.warning("No insurance data available for selected filters.")
 
 st.markdown("---")
-st.caption("📍 Dashboard inspired by Kaleeswari | Customized by Atharva | Data: PhonePe Pulse")
+st.caption("📍 Dashboard by Atharva | Data: PhonePe Pulse")
 
