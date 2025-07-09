@@ -18,6 +18,13 @@ df7 = pd.read_csv("top_user.csv")
 df8 = pd.read_csv("top_transaction.csv")
 df9 = pd.read_csv("top_insurance.csv")
 
+# New data
+engagement_df = pd.read_csv("df_user_engagement.csv")
+device_df = pd.read_csv("df_device_dominance.csv")
+dynamics_df = pd.read_csv("df_transaction_dynamics.csv")
+insurance_growth_df = pd.read_csv("df_insurance_growth.csv")
+top_district_df = pd.read_csv("df_top_districts.csv")
+
 # 🔧 Sidebar Filters
 st.sidebar.header("🔧 Filters")
 years = sorted(df1["Year"].dropna().unique())
@@ -57,7 +64,11 @@ menu = st.sidebar.radio("📌 Select Section", [
     "User Insights",
     "Insurance Trends",
     "Top Districts",
-    "State-Level Map"
+    "State-Level Map",
+    "📱 Device Insights",
+    "📈 Transaction Dynamics",
+    "🛡️ Insurance Growth",
+    "🥇 District Leaderboard"
 ])
 
 # Overview
@@ -143,10 +154,54 @@ elif menu == "State-Level Map":
     else:
         st.warning("No map data available for selected filters.")
 
+# Device Insights
+elif menu == "📱 Device Insights":
+    st.header("📱 Most Used Devices")
+    top_device = device_df.groupby("Brand")["User_Count"].sum().nlargest(10).reset_index()
+    fig = px.pie(top_device, names="Brand", values="User_Count", title="Top 10 Phone Brands")
+    st.plotly_chart(fig, use_container_width=True)
+
+# Transaction Dynamics
+elif menu == "📈 Transaction Dynamics":
+    st.header("💸 Average Transaction Value Over Time")
+    fig = px.line(dynamics_df, x="Year", y="Average_Transaction_Value", color="Transaction_type",
+                  markers=True, title="Average Transaction Value by Type")
+    st.plotly_chart(fig, use_container_width=True)
+
+# Insurance Growth
+elif menu == "🛡️ Insurance Growth":
+    st.header("📈 Insurance Growth by Year")
+    fig = px.area(insurance_growth_df, x="Year", y="Amount", color="State", title="Insurance Premiums Collected by State")
+    st.plotly_chart(fig, use_container_width=True)
+
+# District Leaderboard
+elif menu == "🥇 District Leaderboard":
+    st.header("🏆 Top Performing Districts")
+    metric = st.selectbox("Select Metric", ["Amount", "Count"])
+    view = st.selectbox("Select Domain", ["Transaction", "User", "Insurance"])
+
+    if view == "Transaction":
+        df = df8.copy()
+    elif view == "User":
+        df = df7.copy()
+    else:
+        df = df9.copy()
+
+    df = df[df["Year"] == selected_year]
+    if selected_state != "All":
+        df = df[df["State"] == selected_state]
+
+    if not df.empty:
+        top = df.groupby("District")[metric].sum().nlargest(10).reset_index()
+        fig = px.bar(top, x="District", y=metric, color=metric,
+                     title=f"Top 10 Districts by {metric} in {view}")
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No data found for selected filters.")
+
 # Footer
 st.markdown("---")
-st.caption("📍 Created by Atharva More | Data: PhonePe Pulse | Power BI Style Filters")
-
+st.caption("📍 Created by Atharva More | Data: PhonePe Pulse ")
 
 
 
