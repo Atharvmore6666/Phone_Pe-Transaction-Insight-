@@ -15,6 +15,7 @@ df_map_ins = pd.read_csv("map_insurance.csv")
 df_top_tr = pd.read_csv("top_transaction.csv")
 df_top_us = pd.read_csv("top_user.csv")
 df_top_ins = pd.read_csv("top_insurance.csv")
+df_states = pd.read_csv("Statenames.csv")  # Must contain 'State', 'State_Formatted'
 
 # Sidebar filters
 st.sidebar.header("🔎 Filters")
@@ -54,24 +55,33 @@ if page == "Aggregated":
 
 # Map Page
 elif page == "Map":
-    st.subheader("🗺️ Map-Based Visualizations")
+    st.subheader("🗺️ State-Wise Transaction Heatmap")
     df_map = filter_df(df_map_tr)
     if not df_map.empty:
-        if 'Latitude' in df_map.columns and 'Longitude' in df_map.columns:
-            st.plotly_chart(px.scatter_mapbox(df_map, lat="Latitude", lon="Longitude", size="Amount", color="Amount",
-                                              mapbox_style="carto-positron", zoom=3, hover_name="District",
-                                              title="District-wise Transaction Amount"), use_container_width=True)
-        else:
-            st.warning("Map data must include Latitude and Longitude columns.")
+        state_summary = df_map.groupby("State")[["Count", "Amount"]].sum().reset_index()
+        state_summary.columns = ["State", "Total_Transactions", "Total_Amount"]
+        state_summary = state_summary.merge(df_states, on="State", how="left")
+
+        fig = px.choropleth(
+            state_summary,
+            geojson="https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson",
+            featureidkey="properties.ST_NM",
+            locations="State_Formatted",
+            color="Total_Transactions",
+            color_continuous_scale="sunset",
+            title="State-wise Total Transactions"
+        )
+        fig.update_geos(fitbounds="locations", visible=False)
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        st.warning("No data available for selected filters.")
+        st.warning("No map data available for selected filters.")
 
 # Top Leaders Page
 elif page == "Top Leaders":
     st.subheader("🥇 Top Performing Districts")
     df_top = filter_df(df_top_tr)
     if not df_top.empty:
-        top_districts = df_top.groupby("District")['Amount'].sum().nlargest(10).reset_index()
+        top_districts = df_top.groupby("District")["Amount"].sum().nlargest(10).reset_index()
         st.plotly_chart(px.bar(top_districts, x="District", y="Amount", color="Amount",
                                title="Top 10 Districts by Transaction Amount"), use_container_width=True)
     else:
@@ -119,4 +129,3 @@ elif page == "Insurance":
 
 st.markdown("---")
 st.caption("📍 Dashboard by Atharva | Data: PhonePe Pulse")
-
