@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import json
+import requests
 
 st.set_page_config(page_title="📊 PhonePe Pulse Dashboard", layout="wide")
 st.title("📱 PhonePe Pulse Visualization")
@@ -15,7 +17,10 @@ df_map_ins = pd.read_csv("map_insurance.csv")
 df_top_tr = pd.read_csv("top_transaction.csv")
 df_top_us = pd.read_csv("top_user.csv")
 df_top_ins = pd.read_csv("top_insurance.csv")
-df_states = pd.read_csv("Statenames.csv")  # Must contain 'State', 'State_Formatted'
+
+# Load India GeoJSON from your GitHub
+geo_url = "https://raw.githubusercontent.com/Atharvmore6666/Phone_Pe-Transaction-Insight-/main/india_states.geojson.txt"
+geojson = requests.get(geo_url).json()
 
 # Sidebar filters
 st.sidebar.header("🔎 Filters")
@@ -60,13 +65,13 @@ elif page == "Map":
     if not df_map.empty:
         state_summary = df_map.groupby("State")[["Count", "Amount"]].sum().reset_index()
         state_summary.columns = ["State", "Total_Transactions", "Total_Amount"]
-        state_summary = state_summary.merge(df_states, on="State", how="left")
+        state_summary["State"] = state_summary["State"].str.title()
 
         fig = px.choropleth(
             state_summary,
-            geojson="https://gist.githubusercontent.com/jbrobst/56c13bbbf9d97d187fea01ca62ea5112/raw/e388c4cae20aa53cb5090210a42ebb9b765c0a36/india_states.geojson",
+            geojson=geojson,
             featureidkey="properties.ST_NM",
-            locations="State_Formatted",
+            locations="State",
             color="Total_Transactions",
             color_continuous_scale="sunset",
             title="State-wise Total Transactions"
