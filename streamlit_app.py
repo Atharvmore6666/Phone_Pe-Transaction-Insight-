@@ -22,6 +22,46 @@ df_top_ins = pd.read_csv("top_insurance.csv")
 geo_url = "https://raw.githubusercontent.com/Atharvmore6666/Phone_Pe-Transaction-Insight-/main/india_states.geojson.txt"
 geojson = requests.get(geo_url).json()
 
+# Full mapping for consistent state names
+state_name_map = {
+    "andaman & nicobar islands": "Andaman & Nicobar",
+    "andhra pradesh": "Andhra Pradesh",
+    "arunachal pradesh": "Arunachal Pradesh",
+    "assam": "Assam",
+    "bihar": "Bihar",
+    "chandigarh": "Chandigarh",
+    "chhattisgarh": "Chhattisgarh",
+    "dadra & nagar haveli and daman & diu": "Dadra and Nagar Haveli and Daman and Diu",
+    "delhi": "Delhi",
+    "goa": "Goa",
+    "gujarat": "Gujarat",
+    "haryana": "Haryana",
+    "himachal pradesh": "Himachal Pradesh",
+    "jammu & kashmir": "Jammu & Kashmir",
+    "jharkhand": "Jharkhand",
+    "karnataka": "Karnataka",
+    "kerala": "Kerala",
+    "ladakh": "Ladakh",
+    "lakshadweep": "Lakshadweep",
+    "madhya pradesh": "Madhya Pradesh",
+    "maharashtra": "Maharashtra",
+    "manipur": "Manipur",
+    "meghalaya": "Meghalaya",
+    "mizoram": "Mizoram",
+    "nagaland": "Nagaland",
+    "odisha": "Odisha",
+    "puducherry": "Puducherry",
+    "punjab": "Punjab",
+    "rajasthan": "Rajasthan",
+    "sikkim": "Sikkim",
+    "tamil nadu": "Tamil Nadu",
+    "telangana": "Telangana",
+    "tripura": "Tripura",
+    "uttar pradesh": "Uttar Pradesh",
+    "uttarakhand": "Uttarakhand",
+    "west bengal": "West Bengal"
+}
+
 # Sidebar filters
 st.sidebar.header("🔎 Filters")
 page = st.sidebar.radio("Navigate", ["Aggregated", "Map", "Top Leaders", "Users", "Insurance"])
@@ -65,7 +105,7 @@ elif page == "Map":
     if not df_map.empty:
         state_summary = df_map.groupby("State")[["Count", "Amount"]].sum().reset_index()
         state_summary.columns = ["State", "Total_Transactions", "Total_Amount"]
-        state_summary["State"] = state_summary["State"].str.title()
+        state_summary["State"] = state_summary["State"].str.lower().replace(state_name_map)
 
         fig = px.choropleth(
             state_summary,
