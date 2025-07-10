@@ -5,9 +5,12 @@ import json
 import requests
 
 st.set_page_config(page_title="📊 PhonePe Pulse Dashboard", layout="wide")
-st.title("📱 PhonePe Pulse Visualization")
+st.markdown("<h1 style='text-align: center; color: #8338ec;'>📱 PhonePe Pulse Visualization</h1>", unsafe_allow_html=True)
 
-# Load CSVs
+# Logo or banner image
+st.image("Pulseimg.jpg", use_column_width=True)  # Place logo/banner image in app folder or upload
+
+# Load Data
 df_tr = pd.read_csv("aggregated_transaction.csv")
 df_us = pd.read_csv("aggregated_user.csv")
 df_ins = pd.read_csv("aggregated_insurance.csv")
@@ -18,11 +21,11 @@ df_top_tr = pd.read_csv("top_transaction.csv")
 df_top_us = pd.read_csv("top_user.csv")
 df_top_ins = pd.read_csv("top_insurance.csv")
 
-# Load India GeoJSON from your GitHub
-geo_url = "https://raw.githubusercontent.com/Atharvmore6666/Phone_Pe-Transaction-Insight-/main/india_states.geojson.txt"
-geojson = requests.get(geo_url).json()
+# Load GeoJSON
+with open("india_states.geojson.txt", "r") as f:
+    geojson = json.load(f)
 
-# Full mapping for consistent state names
+# State mapping
 state_name_map = {
     "andaman & nicobar islands": "Andaman & Nicobar",
     "andhra pradesh": "Andhra Pradesh",
@@ -62,7 +65,7 @@ state_name_map = {
     "west bengal": "West Bengal"
 }
 
-# Sidebar filters
+# Sidebar
 st.sidebar.header("🔎 Filters")
 page = st.sidebar.radio("Navigate", ["Aggregated", "Map", "Top Leaders", "Users", "Insurance"])
 year = st.sidebar.selectbox("Select Year", sorted(df_tr['Year'].unique()))
@@ -70,7 +73,7 @@ quarter = st.sidebar.selectbox("Select Quarter", ["All"] + sorted(df_tr['Quarter
 state = st.sidebar.selectbox("Select State", ["All"] + sorted(df_tr['State'].unique()))
 txn_type = st.sidebar.selectbox("Select Transaction Type", ["All"] + sorted(df_tr['Transaction_type'].unique()))
 
-# Function to filter DataFrame
+# Filter logic
 def filter_df(df):
     df = df[df['Year'] == year]
     if quarter != "All":
@@ -79,7 +82,7 @@ def filter_df(df):
         df = df[df['State'] == state]
     return df
 
-# Aggregated Page
+# Aggregated Tab
 if page == "Aggregated":
     st.subheader("📊 Aggregated Insights")
     df_f = filter_df(df_tr)
@@ -98,14 +101,16 @@ if page == "Aggregated":
     if not df_user.empty:
         st.plotly_chart(px.pie(df_user, names='Brand', values='Count', title="User Brand Share"), use_container_width=True)
 
-# Map Page
+# Map Tab
 elif page == "Map":
     st.subheader("🗺️ State-Wise Transaction Heatmap")
+
     df_map = filter_df(df_map_tr)
     if not df_map.empty:
         state_summary = df_map.groupby("State")[["Count", "Amount"]].sum().reset_index()
         state_summary.columns = ["State", "Total_Transactions", "Total_Amount"]
-        state_summary["State"] = state_summary["State"].str.lower().replace(state_name_map)
+        state_summary["State"] = state_summary["State"].str.lower().map(state_name_map)
+        state_summary = state_summary.dropna(subset=["State"])
 
         fig = px.choropleth(
             state_summary,
@@ -113,15 +118,23 @@ elif page == "Map":
             featureidkey="properties.ST_NM",
             locations="State",
             color="Total_Transactions",
-            color_continuous_scale="sunset",
-            title="State-wise Total Transactions"
+            color_continuous_scale="plasma",
+            title="📍 State-wise Total Transactions",
+            hover_name="State",
+            labels={"Total_Transactions": "Total Transactions"}
         )
         fig.update_geos(fitbounds="locations", visible=False)
+        fig.update_layout(
+            margin={"r":0,"t":30,"l":0,"b":0},
+            geo=dict(bgcolor="rgba(0,0,0,0)"),
+            paper_bgcolor="#0e1117",
+            font_color="#f0f0f0"
+        )
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.warning("No map data available for selected filters.")
+        st.warning("⚠️ No map data available for selected filters.")
 
-# Top Leaders Page
+# Top Districts Tab
 elif page == "Top Leaders":
     st.subheader("🥇 Top Performing Districts")
     df_top = filter_df(df_top_tr)
@@ -130,9 +143,9 @@ elif page == "Top Leaders":
         st.plotly_chart(px.bar(top_districts, x="District", y="Amount", color="Amount",
                                title="Top 10 Districts by Transaction Amount"), use_container_width=True)
     else:
-        st.warning("No top district data available for selected filters.")
+        st.warning("No data available.")
 
-# Users Page
+# Users Tab
 elif page == "Users":
     st.subheader("📱 User Insights")
     df_user = filter_df(df_us)
@@ -145,14 +158,14 @@ elif page == "Users":
         st.plotly_chart(px.bar(df_user, x="Brand", y="Count", color="Brand", title="User Brand Distribution"), use_container_width=True)
 
         df_map_user = filter_df(df_map_us)
-        if not df_map_user.empty and 'Latitude' in df_map_user.columns and 'Longitude' in df_map_user.columns:
+        if not df_map_user.empty:
             st.plotly_chart(px.scatter_mapbox(df_map_user, lat="Latitude", lon="Longitude", size="Count", color="Count",
                                               mapbox_style="open-street-map", zoom=3, hover_name="District",
                                               title="District-wise App Opens"), use_container_width=True)
     else:
         st.warning("No user data available for selected filters.")
 
-# Insurance Page
+# Insurance Tab
 elif page == "Insurance":
     st.subheader("🛡️ Insurance Trends")
     df_ins_f = filter_df(df_ins)
@@ -165,12 +178,12 @@ elif page == "Insurance":
         st.plotly_chart(fig_line, use_container_width=True)
 
         df_map_ins_f = filter_df(df_map_ins)
-        if not df_map_ins_f.empty and 'Latitude' in df_map_ins_f.columns and 'Longitude' in df_map_ins_f.columns:
+        if not df_map_ins_f.empty:
             st.plotly_chart(px.scatter_mapbox(df_map_ins_f, lat="Latitude", lon="Longitude", size="Amount", color="Amount",
                                               mapbox_style="carto-positron", zoom=3, hover_name="District",
                                               title="District-wise Insurance Collection"), use_container_width=True)
     else:
-        st.warning("No insurance data available for selected filters.")
+        st.warning("No insurance data available.")
 
 st.markdown("---")
 st.caption("📍 Dashboard by Atharva | Data: PhonePe Pulse")
