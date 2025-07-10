@@ -1,8 +1,10 @@
 streamlit
 pandas
+plotly
 matplotlib
 seaborn
 sqlalchemy
 tqdm
-plotly
+requests
+
 
