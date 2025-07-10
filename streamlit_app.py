@@ -5,11 +5,10 @@ import json
 
 st.set_page_config(page_title="📊 PhonePe Pulse Dashboard", page_icon="ICN.png", layout="wide")
 
-# Header banner
 st.image("Pulseimg.jpg", use_container_width=True)
 st.markdown("<h1 style='text-align: center; color: #8338ec;'>📱 PhonePe Pulse Visualization</h1>", unsafe_allow_html=True)
 
-# Load Data
+# Load data
 df_tr = pd.read_csv("aggregated_transaction.csv")
 df_us = pd.read_csv("aggregated_user.csv")
 df_ins = pd.read_csv("aggregated_insurance.csv")
@@ -23,9 +22,19 @@ df_top_ins = pd.read_csv("top_insurance.csv")
 with open("india_states.geojson.txt", "r", encoding="utf-8") as f:
     geojson = json.load(f)
 
-# Normalize CSV state names
-def normalize_state_name(name):
-    return name.lower().replace('-', ' ').replace('&', 'and')
+# Fix mismatched state names from CSV to GeoJSON using manual mapping
+state_name_fix = {
+    "andaman-&-nicobar-islands": "Andaman & Nicobar",
+    "dadra-&-nagar-haveli-&-daman-&-diu": "Dadra and Nagar Haveli and Daman and Diu",
+    "jammu-&-kashmir": "Jammu & Kashmir",
+    "andhra-pradesh": "Andhra Pradesh",
+    "arunachal-pradesh": "Arunachal Pradesh",
+    "himachal-pradesh": "Himachal Pradesh",
+    "madhya-pradesh": "Madhya Pradesh",
+    "uttar-pradesh": "Uttar Pradesh",
+    "tamil-nadu": "Tamil Nadu",
+    "west-bengal": "West Bengal"
+}
 
 # Sidebar
 st.sidebar.header("🔎 Filters")
@@ -35,7 +44,6 @@ quarter = st.sidebar.selectbox("Select Quarter", ["All"] + sorted(df_tr['Quarter
 state = st.sidebar.selectbox("Select State", ["All"] + sorted(df_tr['State'].unique()))
 txn_type = st.sidebar.selectbox("Select Transaction Type", ["All"] + sorted(df_tr['Transaction_type'].unique()))
 
-# Filter helper
 def filter_df(df):
     df = df[df['Year'] == year]
     if quarter != "All":
@@ -44,7 +52,7 @@ def filter_df(df):
         df = df[df['State'] == state]
     return df
 
-# Aggregated
+# Aggregated View
 if page == "Aggregated":
     st.subheader("📊 Aggregated Insights")
     df_f = filter_df(df_tr)
@@ -63,7 +71,7 @@ if page == "Aggregated":
     if not df_user.empty:
         st.plotly_chart(px.pie(df_user, names='Brand', values='Count', title="User Brand Share"), use_container_width=True)
 
-# Map
+# Map View
 elif page == "Map":
     st.subheader("🗺️ State-Wise Transaction Heatmap")
     df_map = filter_df(df_map_tr)
@@ -71,14 +79,14 @@ elif page == "Map":
         state_summary = df_map.groupby("State")[["Count", "Amount"]].sum().reset_index()
         state_summary.columns = ["State", "Total_Transactions", "Total_Amount"]
 
-        # Normalize state names to match GeoJSON
-        state_summary["Geo_State"] = state_summary["State"].apply(normalize_state_name)
+        # Apply name fixes
+        state_summary["State"] = state_summary["State"].apply(lambda x: state_name_fix.get(x.lower(), x))
 
         fig = px.choropleth(
             state_summary,
             geojson=geojson,
             featureidkey="properties.ST_NM",
-            locations="Geo_State",
+            locations="State",
             color="Total_Transactions",
             color_continuous_scale="plasma",
             title="📍 State-wise Total Transactions",
@@ -106,7 +114,7 @@ elif page == "Top Leaders":
     else:
         st.warning("No data available.")
 
-# Users
+# Users View
 elif page == "Users":
     st.subheader("📱 User Insights")
     df_user = filter_df(df_us)
@@ -134,7 +142,7 @@ elif page == "Users":
     else:
         st.warning("No user data available.")
 
-# Insurance
+# Insurance View
 elif page == "Insurance":
     st.subheader("🛡️ Insurance Trends")
     df_ins_f = filter_df(df_ins)
