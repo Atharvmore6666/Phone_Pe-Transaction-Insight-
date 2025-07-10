@@ -5,6 +5,7 @@ import json
 
 st.set_page_config(page_title="📊 PhonePe Pulse Dashboard", page_icon="ICN.png", layout="wide")
 
+# Header
 st.image("Pulseimg.jpg", use_container_width=True)
 st.markdown("<h1 style='text-align: center; color: #8338ec;'>📱 PhonePe Pulse Visualization</h1>", unsafe_allow_html=True)
 
@@ -22,21 +23,47 @@ df_top_ins = pd.read_csv("top_insurance.csv")
 with open("india_states.geojson.txt", "r", encoding="utf-8") as f:
     geojson = json.load(f)
 
-# Fix mismatched state names from CSV to GeoJSON using manual mapping
+# Correct state name mapping
 state_name_fix = {
     "andaman-&-nicobar-islands": "Andaman & Nicobar",
-    "dadra-&-nagar-haveli-&-daman-&-diu": "Dadra and Nagar Haveli and Daman and Diu",
-    "jammu-&-kashmir": "Jammu & Kashmir",
     "andhra-pradesh": "Andhra Pradesh",
     "arunachal-pradesh": "Arunachal Pradesh",
+    "assam": "Assam",
+    "bihar": "Bihar",
+    "chandigarh": "Chandigarh",
+    "chhattisgarh": "Chhattisgarh",
+    "dadra-&-nagar-haveli-&-daman-&-diu": "Dadra and Nagar Haveli and Daman and Diu",
+    "delhi": "Delhi",
+    "goa": "Goa",
+    "gujarat": "Gujarat",
+    "haryana": "Haryana",
     "himachal-pradesh": "Himachal Pradesh",
+    "jammu-&-kashmir": "Jammu & Kashmir",
+    "jharkhand": "Jharkhand",
+    "karnataka": "Karnataka",
+    "kerala": "Kerala",
+    "ladakh": "Ladakh",
+    "lakshadweep": "Lakshadweep",
     "madhya-pradesh": "Madhya Pradesh",
-    "uttar-pradesh": "Uttar Pradesh",
+    "maharashtra": "Maharashtra",
+    "manipur": "Manipur",
+    "meghalaya": "Meghalaya",
+    "mizoram": "Mizoram",
+    "nagaland": "Nagaland",
+    "odisha": "Odisha",
+    "puducherry": "Puducherry",
+    "punjab": "Punjab",
+    "rajasthan": "Rajasthan",
+    "sikkim": "Sikkim",
     "tamil-nadu": "Tamil Nadu",
+    "telangana": "Telangana",
+    "tripura": "Tripura",
+    "uttar-pradesh": "Uttar Pradesh",
+    "uttarakhand": "Uttarakhand",
     "west-bengal": "West Bengal"
 }
 
-# Sidebar
+# Sidebar filters
 st.sidebar.header("🔎 Filters")
 page = st.sidebar.radio("Navigate", ["Aggregated", "Map", "Top Leaders", "Users", "Insurance"])
 year = st.sidebar.selectbox("Select Year", sorted(df_tr['Year'].unique()))
@@ -44,6 +71,7 @@ quarter = st.sidebar.selectbox("Select Quarter", ["All"] + sorted(df_tr['Quarter
 state = st.sidebar.selectbox("Select State", ["All"] + sorted(df_tr['State'].unique()))
 txn_type = st.sidebar.selectbox("Select Transaction Type", ["All"] + sorted(df_tr['Transaction_type'].unique()))
 
+# Helper to filter DataFrame
 def filter_df(df):
     df = df[df['Year'] == year]
     if quarter != "All":
@@ -52,7 +80,7 @@ def filter_df(df):
         df = df[df['State'] == state]
     return df
 
-# Aggregated View
+# Aggregated Page
 if page == "Aggregated":
     st.subheader("📊 Aggregated Insights")
     df_f = filter_df(df_tr)
@@ -71,16 +99,14 @@ if page == "Aggregated":
     if not df_user.empty:
         st.plotly_chart(px.pie(df_user, names='Brand', values='Count', title="User Brand Share"), use_container_width=True)
 
-# Map View
+# Map Page
 elif page == "Map":
     st.subheader("🗺️ State-Wise Transaction Heatmap")
     df_map = filter_df(df_map_tr)
     if not df_map.empty:
         state_summary = df_map.groupby("State")[["Count", "Amount"]].sum().reset_index()
         state_summary.columns = ["State", "Total_Transactions", "Total_Amount"]
-
-        # Apply name fixes
-        state_summary["State"] = state_summary["State"].apply(lambda x: state_name_fix.get(x.lower(), x))
+        state_summary["State"] = state_summary["State"].str.lower().map(state_name_fix)
 
         fig = px.choropleth(
             state_summary,
@@ -93,7 +119,6 @@ elif page == "Map":
             hover_name="State",
             labels={"Total_Transactions": "Total Transactions"}
         )
-
         fig.update_geos(fitbounds="locations", visible=False)
         fig.update_layout(margin={"r":0,"t":30,"l":0,"b":0},
                           geo=dict(bgcolor="rgba(0,0,0,0)"),
@@ -103,7 +128,7 @@ elif page == "Map":
     else:
         st.warning("⚠️ No map data available for selected filters.")
 
-# Top Leaders
+# Top Leaders Page
 elif page == "Top Leaders":
     st.subheader("🥇 Top Performing Districts")
     df_top = filter_df(df_top_tr)
@@ -114,7 +139,7 @@ elif page == "Top Leaders":
     else:
         st.warning("No data available.")
 
-# Users View
+# Users Page
 elif page == "Users":
     st.subheader("📱 User Insights")
     df_user = filter_df(df_us)
@@ -142,7 +167,7 @@ elif page == "Users":
     else:
         st.warning("No user data available.")
 
-# Insurance View
+# Insurance Page
 elif page == "Insurance":
     st.subheader("🛡️ Insurance Trends")
     df_ins_f = filter_df(df_ins)
@@ -172,3 +197,4 @@ elif page == "Insurance":
 
 st.markdown("---")
 st.caption("📍 Dashboard by Atharva | Data: PhonePe Pulse")
+
