@@ -2,13 +2,12 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import json
-import requests
 
-st.set_page_config(page_title="📊 PhonePe Pulse Dashboard", layout="wide")
+st.set_page_config(page_title="📊 PhonePe Pulse Dashboard", page_icon="ICN.png", layout="wide")
+
+# App Title + Header Image
+st.image("Pulseimg.jpg", use_container_width=True)
 st.markdown("<h1 style='text-align: center; color: #8338ec;'>📱 PhonePe Pulse Visualization</h1>", unsafe_allow_html=True)
-
-# Logo or banner image
-st.image("Pulseimg.jpg", use_column_width=True)  # Place logo/banner image in app folder or upload
 
 # Load Data
 df_tr = pd.read_csv("aggregated_transaction.csv")
@@ -21,11 +20,10 @@ df_top_tr = pd.read_csv("top_transaction.csv")
 df_top_us = pd.read_csv("top_user.csv")
 df_top_ins = pd.read_csv("top_insurance.csv")
 
-# Load GeoJSON
 with open("india_states.geojson.txt", "r") as f:
     geojson = json.load(f)
 
-# State mapping
+# State Mapping
 state_name_map = {
     "andaman & nicobar islands": "Andaman & Nicobar",
     "andhra pradesh": "Andhra Pradesh",
@@ -65,7 +63,7 @@ state_name_map = {
     "west bengal": "West Bengal"
 }
 
-# Sidebar
+# Sidebar Filters
 st.sidebar.header("🔎 Filters")
 page = st.sidebar.radio("Navigate", ["Aggregated", "Map", "Top Leaders", "Users", "Insurance"])
 year = st.sidebar.selectbox("Select Year", sorted(df_tr['Year'].unique()))
@@ -73,7 +71,7 @@ quarter = st.sidebar.selectbox("Select Quarter", ["All"] + sorted(df_tr['Quarter
 state = st.sidebar.selectbox("Select State", ["All"] + sorted(df_tr['State'].unique()))
 txn_type = st.sidebar.selectbox("Select Transaction Type", ["All"] + sorted(df_tr['Transaction_type'].unique()))
 
-# Filter logic
+# Filter Function
 def filter_df(df):
     df = df[df['Year'] == year]
     if quarter != "All":
@@ -104,7 +102,6 @@ if page == "Aggregated":
 # Map Tab
 elif page == "Map":
     st.subheader("🗺️ State-Wise Transaction Heatmap")
-
     df_map = filter_df(df_map_tr)
     if not df_map.empty:
         state_summary = df_map.groupby("State")[["Count", "Amount"]].sum().reset_index()
@@ -134,7 +131,7 @@ elif page == "Map":
     else:
         st.warning("⚠️ No map data available for selected filters.")
 
-# Top Districts Tab
+# Top Leaders Tab
 elif page == "Top Leaders":
     st.subheader("🥇 Top Performing Districts")
     df_top = filter_df(df_top_tr)
@@ -158,12 +155,20 @@ elif page == "Users":
         st.plotly_chart(px.bar(df_user, x="Brand", y="Count", color="Brand", title="User Brand Distribution"), use_container_width=True)
 
         df_map_user = filter_df(df_map_us)
-        if not df_map_user.empty:
-            st.plotly_chart(px.scatter_mapbox(df_map_user, lat="Latitude", lon="Longitude", size="Count", color="Count",
-                                              mapbox_style="open-street-map", zoom=3, hover_name="District",
-                                              title="District-wise App Opens"), use_container_width=True)
+        if not df_map_user.empty and {'Latitude', 'Longitude'}.issubset(df_map_user.columns):
+            df_map_user = df_map_user.dropna(subset=["Latitude", "Longitude", "Count"])
+            df_map_user["Latitude"] = pd.to_numeric(df_map_user["Latitude"], errors="coerce")
+            df_map_user["Longitude"] = pd.to_numeric(df_map_user["Longitude"], errors="coerce")
+            df_map_user = df_map_user.dropna(subset=["Latitude", "Longitude"])
+
+            if not df_map_user.empty:
+                st.plotly_chart(px.scatter_mapbox(df_map_user, lat="Latitude", lon="Longitude", size="Count", color="Count",
+                                                  mapbox_style="open-street-map", zoom=3, hover_name="District",
+                                                  title="District-wise App Opens"), use_container_width=True)
+            else:
+                st.warning("No valid map data.")
     else:
-        st.warning("No user data available for selected filters.")
+        st.warning("No user data available.")
 
 # Insurance Tab
 elif page == "Insurance":
@@ -178,10 +183,18 @@ elif page == "Insurance":
         st.plotly_chart(fig_line, use_container_width=True)
 
         df_map_ins_f = filter_df(df_map_ins)
-        if not df_map_ins_f.empty:
-            st.plotly_chart(px.scatter_mapbox(df_map_ins_f, lat="Latitude", lon="Longitude", size="Amount", color="Amount",
-                                              mapbox_style="carto-positron", zoom=3, hover_name="District",
-                                              title="District-wise Insurance Collection"), use_container_width=True)
+        if not df_map_ins_f.empty and {'Latitude', 'Longitude'}.issubset(df_map_ins_f.columns):
+            df_map_ins_f = df_map_ins_f.dropna(subset=["Latitude", "Longitude", "Amount"])
+            df_map_ins_f["Latitude"] = pd.to_numeric(df_map_ins_f["Latitude"], errors="coerce")
+            df_map_ins_f["Longitude"] = pd.to_numeric(df_map_ins_f["Longitude"], errors="coerce")
+            df_map_ins_f = df_map_ins_f.dropna(subset=["Latitude", "Longitude"])
+
+            if not df_map_ins_f.empty:
+                st.plotly_chart(px.scatter_mapbox(df_map_ins_f, lat="Latitude", lon="Longitude", size="Amount", color="Amount",
+                                                  mapbox_style="carto-positron", zoom=3, hover_name="District",
+                                                  title="District-wise Insurance Collection"), use_container_width=True)
+            else:
+                st.warning("No valid location data for insurance.")
     else:
         st.warning("No insurance data available.")
 
